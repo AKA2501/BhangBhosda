@@ -2,23 +2,15 @@
 -----Version-1.4----
 */
 const sendata = require('./sendv2.js');
-const stepsaddition = require('./parserv3.js');
 const datacheck = require('./datacheck.js');
 const insertSchedulingRunInfo = require('./insertrun.js');
 const updateSchedulingRunInfo = require('./updaterun.js');
-//const modifyAndSaveVehiclesData = require('./seeding.js');
-const kctsfetchData = require('./KCTS_data-fetch-con1.js');
-const cctfetchData = require('./cct_data-fetch-con1.js');
 const updatestputime =require('./updateestputime.js');
-const notafetchData=require("./NOTA_data-fetch-con1.js")
-const wotafetchData=require("./WOTA_data-fetch-con1.js");
 const opcfetchData=require("./OPC_data-fetch-con1.js")
-const rtaiafetchData =require('./rtaia_data-fetch-con1.js')
-const rtastepsaddition = require('./rtaparserv3.js');
 const errorhandling=require('./errorhandling.js')
 const frwdcalcproc= require('./frwdcalcproc.js'); 
 const editsegments=require('./editsegments.js');
-const preassignstepsaddition = require('./notaparserv3.js');
+const preassignstepsaddition = require('./parserv3.js');
 
 
 // Function to run processes sequentially
@@ -38,36 +30,7 @@ async function gen_sched(travelDate, theJData) {
     console.log("the element value is", element);
     let serializedFilePath = null;
 
-    if (element.tenant === "KCTS") {
-      console.log("enters the KCTS case ");
-      await updatestputime(aTravelDate,element.tenant);
-      result = await kctsfetchData(aTravelDate, element.operator, element.tenant, element);
-      operatorValue = 'KCTS';
-      serializedFilePath=result[2];
-    }else if(element.tenant === "CCT"){
-      console.log("enters the CCT case ");
-      await updatestputime(aTravelDate,element.tenant);
-      //await delay(5 * 1000);
-      result = await cctfetchData(aTravelDate, element.operator, element.tenant, element);
-      operatorValue = element.operator;
-      serializedFilePath=result[2];
-    }else if(element.tenant === "NOTA"){
-      console.log("enters the NOTA case ");
-      await frwdcalcproc(aTravelDate,element.tenant);
-//      await delay(5 * 1000);
-      await updatestputime(aTravelDate,element.tenant);
-      result = await notafetchData(aTravelDate, element.operator, element.tenant, element);
-      operatorValue = 'NOTA';
-      await preassignstepsaddition(operatorValue, aTravelDate,theJDataArray[0].tenant,result[2]);
-      await errorhandling(element.speedfactor,element.tenant,result[2]);
-      serializedFilePath=result[2];    
-    }else if(element.tenant === "WOTA"){
-      console.log("enters the WOTA case ");
-      await updatestputime(aTravelDate,element.tenant);
-      result = await wotafetchData(aTravelDate, element.operator, element.tenant, element);
-      operatorValue = element.operator;
-      serializedFilePath=result[2];
-    }else if(element.tenant === "OPC"){
+    if(element.tenant === "OPC"){
       console.log("enters the OPC case ");
       await updatestputime(aTravelDate,element.tenant);
       result = await opcfetchData(aTravelDate, element.operator, element.tenant, element);
@@ -75,16 +38,6 @@ async function gen_sched(travelDate, theJData) {
       await preassignstepsaddition(operatorValue, aTravelDate,theJDataArray[0].tenant,result[2]);
       await errorhandling(element.speedfactor,element.tenant,result[2]);
       serializedFilePath=result[2];   
-    }else if(element.tenant==='RTAIA'){
-      console.log("enters the RTAIA case ");
-      await updatestputime(aTravelDate,element.tenant);
-      await frwdcalcproc(aTravelDate,element.tenant);
-      console.log(element.operator);
-      operatorValue= 'RTA8';
-      result = await rtaiafetchData(aTravelDate,element.tenant,element.tenant,element);
-      await rtastepsaddition(operatorValue, aTravelDate,theJDataArray[0].tenant,result[2]);
-      await errorhandling(element.speedfactor,element.tenant,result[2]); 
-      serializedFilePath = result[2];
     }
 
     if(serializedFilePath==null){
@@ -111,9 +64,9 @@ async function gen_sched(travelDate, theJData) {
     const filename = await sendata(serializedFilePath, operatorValue, aTravelDate, element.tenant);
     console.log('output generated!!.\n');
 
-    if(element.operator==='RTA8' || element.tenant==='NOTA'|| element.tenant==='WOTA'|| element.tenant==='OPC'){
+    
       await editsegments(filename,serializedFilePath);
-    } 
+   
 
     console.log('Inserting scheduling run info...');
     //await insertSchedulingRunInfo(aTravelDate, element, filename, element.tenant); // Update to use theJDataArray
